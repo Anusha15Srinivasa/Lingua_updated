@@ -1,4 +1,4 @@
-# Simple Messaging App
+# Lingua
 
 This is a simple messaging app built with Flask, SocketIO, SQLAlchemy, and Flask-Login for user authentication and two-way communication.
 
