@@ -77,7 +77,13 @@ def get_messages():
         ).order_by(Message.timestamp.asc()).all()
     else:
         messages = []
-    return jsonify([{'content': msg.content, 'timestamp': msg.timestamp, 'author': msg.author.username, 'recipient': msg.recipient.username} for msg in messages])
+    return jsonify([{
+            'content': msg.content,
+            'timestamp': msg.timestamp,
+            'author': msg.author.username,
+            'recipient': msg.recipient.username,
+            'sender_id': msg.sender_id,
+        } for msg in messages])
 
 @app.route('/translate', methods=['POST'])
 @login_required
@@ -103,7 +109,14 @@ def handleMessage(data):
         message = Message(content=data['message'], author=current_user, recipient=recipient)
         db.session.add(message)
         db.session.commit()
-        send({'message': data['message'], 'author': current_user.username, 'recipient': recipient.username}, broadcast=True)
+        send({
+            'message': data['message'],
+            'author': current_user.username,
+            'recipient': recipient.username,
+            # Add sender_id to determine message alignment
+            'sender_id': current_user.id
+        }, broadcast=True)
+        # send({'message': data['message'], 'author': current_user.username, 'recipient': recipient.username}, broadcast=True)
 
 if __name__ == '__main__':
     with app.app_context():
