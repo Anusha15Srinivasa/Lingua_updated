@@ -101,6 +101,12 @@ def search_users():
     users = User.query.filter(User.username.like(f"%{query}%")).all()
     return jsonify([{'id': user.id, 'username': user.username} for user in users])
 
+@app.route('/users', methods=['GET'])
+@login_required
+def get_users():
+    users = User.query.all()
+    return jsonify([{'id': user.id, 'username': user.username} for user in users])
+
 @socketio.on('message')
 @login_required
 def handleMessage(data):

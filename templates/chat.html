@@ -13,9 +13,7 @@
                 <input type="text" id="search-user" placeholder="Search or start a new chat" oninput="searchUser()">
             </div>
             <div id="chat-list" class="chat-list">
-                {% for user in users %}
-                <div class="chat-item" onclick="loadChat({{ user.id }}, '{{ user.username|e|replace("'", "\\'") }}')">{{ user.username }}</div>
-                {% endfor %}
+                <!-- Chat items will be dynamically populated here -->
             </div>
         </div>
         <div class="main-chat">
@@ -34,6 +32,7 @@
         const socket = io();
         let currentRecipientId = null;
         const currentUserId = {{ current_user.id }}; // Add current user ID
+        const currentUsername = "{{ current_user.username }}"; // Add current username
 
         socket.on('message', function(data){
             if ((data.recipient === document.getElementById('chat-recipient').textContent) || 
@@ -47,36 +46,33 @@
         });
 
         function loadChatList() {
-            fetch('/messages')
+            fetch('/users')
                 .then(response => response.json())
-                .then(data => {
+                .then(users => {
                     const chatList = document.getElementById('chat-list');
                     chatList.innerHTML = '';
-                    const groupedMessages = groupMessagesByRecipient(data);
-                    for (const recipient in groupedMessages) {
-                        const chatItem = document.createElement('div');
-                        chatItem.className = 'chat-item';
-                        chatItem.textContent = recipient;
-                        chatItem.onclick = () => loadChat(groupedMessages[recipient][0].recipient_id, recipient);
-                        chatList.appendChild(chatItem);
-                    }
+                    users.forEach(user => {
+                        if (user.username !== currentUsername) { // Filter out the current user
+                            const chatItem = document.createElement('div');
+                            chatItem.className = 'chat-item';
+                            chatItem.textContent = user.username;
+                            chatItem.onclick = () => loadChat(user.id, user.username, chatItem);
+                            chatList.appendChild(chatItem);
+                        }
+                    });
                 });
         }
 
-        function groupMessagesByRecipient(messages) {
-            return messages.reduce((groups, message) => {
-                const key = message.recipient === current_user ? message.author : message.recipient;
-                if (!groups[key]) {
-                    groups[key] = [];
-                }
-                groups[key].push(message);
-                return groups;
-            }, {});
-        }
-
-        function loadChat(recipientId, recipientName) {
+        function loadChat(recipientId, recipientName, chatItem) {
             currentRecipientId = recipientId;
             document.getElementById('chat-recipient').textContent = recipientName;
+
+            // Remove active class from all chat items
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+
+            // Add active class to the selected chat item
+            chatItem.classList.add('active');
+
             fetch(`/messages?recipient_id=${recipientId}`)
                 .then(response => response.json())
                 .then(messages => {
@@ -100,7 +96,6 @@
                     <option value="fr">French</option>
                     <option value="de">German</option>
                     <option value="zh-cn">Chinese</option>
-                    <!-- Add more languages as needed -->
                 </select>
             `;
             chatBox.appendChild(messageElement);
@@ -138,19 +133,14 @@
 
         function searchUser() {
             let searchInput = document.getElementById('search-user').value;
-            fetch(`/search_users?query=${searchInput}`)
-                .then(response => response.json())
-                .then(users => {
-                    const chatList = document.getElementById('chat-list');
-                    chatList.innerHTML = '';
-                    users.forEach(user => {
-                        const chatItem = document.createElement('div');
-                        chatItem.className = 'chat-item';
-                        chatItem.textContent = user.username;
-                        chatItem.onclick = () => loadChat(user.id, user.username);
-                        chatList.appendChild(chatItem);
-                    });
-                });
+            let chatItems = document.querySelectorAll('.chat-item');
+            chatItems.forEach(item => {
+                if (item.textContent.toLowerCase().includes(searchInput.toLowerCase())) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
         }
     </script>
 </body>

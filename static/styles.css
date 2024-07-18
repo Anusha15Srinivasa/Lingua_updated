@@ -1,5 +1,5 @@
 body {
-    background-color: #add8e6; /* Light blue background */
+    background-color: #add8e6; 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -22,8 +22,8 @@ body {
 }
 
 .welcome-title {
-    font-size: 4em; /* Huge font size */
-    font-style: italic; /* Slant font */
+    font-size: 4em; 
+    font-style: italic; 
     margin-bottom: 20px;
 }
 
@@ -179,14 +179,24 @@ button:hover {
     max-width: 60%;
 }
 
-/* Sent messages will align to the right */
 .message.sent {
-    background-color: #dcf8c6;
+    background-color: #d6a4de;
     align-self: flex-end;
 }
 
-/* Received messages will align to the left */
 .message.received {
-    background-color: #fff;
+    background-color: #eae0e0;
     align-self: flex-start;
+}
+
+.chat-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #fff;
+    transition: background-color 0.2s;
+}
+
+.chat-item:hover,
+.chat-item.active {
+    background-color: #b097ce;
 }
