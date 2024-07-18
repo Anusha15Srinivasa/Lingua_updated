@@ -38,6 +38,15 @@
             if ((data.recipient === document.getElementById('chat-recipient').textContent) || 
                 (data.author === document.getElementById('chat-recipient').textContent)) {
                 addMessage(data.message, data.author, data.recipient, data.sender_id);
+            } else if (data.recipient === currentUsername) {
+                // Add notification indicator for new message
+                const chatItem = document.querySelector(`.chat-item[data-username="${data.author}"]`);
+                if (chatItem) {
+                    const notification = chatItem.querySelector('.notification');
+                    if (notification) {
+                        notification.style.display = 'inline-block';
+                    }
+                }
             }
         });
 
@@ -55,7 +64,8 @@
                         if (user.username !== currentUsername) { // Filter out the current user
                             const chatItem = document.createElement('div');
                             chatItem.className = 'chat-item';
-                            chatItem.textContent = user.username;
+                            chatItem.setAttribute('data-username', user.username); // Set username attribute
+                            chatItem.innerHTML = `${user.username} <span class="notification"></span>`;
                             chatItem.onclick = () => loadChat(user.id, user.username, chatItem);
                             chatList.appendChild(chatItem);
                         }
@@ -72,6 +82,12 @@
 
             // Add active class to the selected chat item
             chatItem.classList.add('active');
+
+            // Remove notification indicator for selected chat item
+            const notification = chatItem.querySelector('.notification');
+            if (notification) {
+                notification.style.display = 'none';
+            }
 
             fetch(`/messages?recipient_id=${recipientId}`)
                 .then(response => response.json())

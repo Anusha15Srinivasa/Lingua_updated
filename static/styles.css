@@ -200,3 +200,14 @@ button:hover {
 .chat-item.active {
     background-color: #b097ce;
 }
+
+.notification {
+    display: none;
+    height: 10px;
+    width: 10px;
+    background-color: red;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+    vertical-align: middle;
+}
