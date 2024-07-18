@@ -4,19 +4,46 @@
     <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .container {
+            display: flex;
+            width: 90%;
+            height: 90%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            background-color: #9772c4;
+            border-radius: 10px;
+            overflow: hidden;
+            justify-content: center;
+            align-items: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 300px; /* Optional: limit form width */
+        }
+
+        form div {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <form method="POST" action="{{ url_for('login') }}">
             {{ form.hidden_tag() }}
-            <h2>Login</h2>
+            <h1>Login</h1>
             <div>
                 {{ form.email.label }}
-                {{ form.email(size=32) }}
+                {{ form.email(size=40) }}
             </div>
             <div>
                 {{ form.password.label }}
-                {{ form.password(size=32) }}
+                {{ form.password(size=40) }}
             </div>
             <div>
                 {{ form.remember.label }}
