@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Simple Messaging App
 
 This is a simple messaging app built with Flask, SocketIO, SQLAlchemy, and Flask-Login for user authentication and two-way communication.
@@ -21,3 +22,6 @@ This is a simple messaging app built with Flask, SocketIO, SQLAlchemy, and Flask
     ```
 
 4. Open your browser and go to `http://127.0.0.1:5000/` to see the app in action.
+=======
+# Lingua_updated
+>>>>>>> d5cecc13e06be460b1da895da558466a8639aa14
