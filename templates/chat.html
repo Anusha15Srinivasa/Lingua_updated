@@ -1,165 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Chat</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h2>Chats</h2>
-                <input type="text" id="search-user" placeholder="Search or start a new chat" oninput="searchUser()">
-            </div>
-            <div id="chat-list" class="chat-list">
-            </div>
-        </div>
-        <div class="main-chat">
-            <div id="chat-header" class="chat-header">
-                <h2 id="chat-recipient">Select a chat</h2>
-            </div>
-            <div id="chat-box" class="chat-box"></div>
-            <div class="message-input">
-                <input type="text" id="message" placeholder="Type a message...">
-                <button onclick="sendMessage()">Send</button>
-            </div>
-        </div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let currentRecipientId = null;
-        const currentUserId = {{ current_user.id }}; // Add current user ID
-        const currentUsername = "{{ current_user.username }}"; // Add current username
-
-        socket.on('message', function(data){
-            if ((data.recipient === document.getElementById('chat-recipient').textContent) || 
-                (data.author === document.getElementById('chat-recipient').textContent)) {
-                addMessage(data.message, data.author, data.recipient, data.sender_id);
-            } else if (data.recipient === currentUsername) {
-                // Add notification indicator for new message
-                const chatItem = document.querySelector(`.chat-item[data-username="${data.author}"]`);
-                if (chatItem) {
-                    const notification = chatItem.querySelector('.notification');
-                    if (notification) {
-                        notification.style.display = 'inline-block';
-                    }
-                }
-            }
-        });
-
-        document.addEventListener("DOMContentLoaded", function(){
-            loadChatList();
-        });
-
-        function loadChatList() {
-            fetch('/users')
-                .then(response => response.json())
-                .then(users => {
-                    const chatList = document.getElementById('chat-list');
-                    chatList.innerHTML = '';
-                    users.forEach(user => {
-                        if (user.username !== currentUsername) { // Filter out the current user
-                            const chatItem = document.createElement('div');
-                            chatItem.className = 'chat-item';
-                            chatItem.setAttribute('data-username', user.username); // Set username attribute
-                            chatItem.innerHTML = `${user.username} <span class="notification"></span>`;
-                            chatItem.onclick = () => loadChat(user.id, user.username, chatItem);
-                            chatList.appendChild(chatItem);
-                        }
-                    });
-                });
-        }
-
-        function loadChat(recipientId, recipientName, chatItem) {
-            currentRecipientId = recipientId;
-            document.getElementById('chat-recipient').textContent = recipientName;
-
-            // Remove active class from all chat items
-            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-
-            // Add active class to the selected chat item
-            chatItem.classList.add('active');
-
-            // Remove notification indicator for selected chat item
-            const notification = chatItem.querySelector('.notification');
-            if (notification) {
-                notification.style.display = 'none';
-            }
-
-            fetch(`/messages?recipient_id=${recipientId}`)
-                .then(response => response.json())
-                .then(messages => {
-                    const chatBox = document.getElementById('chat-box');
-                    chatBox.innerHTML = '';
-                    messages.forEach(msg => addMessage(msg.content, msg.author, msg.recipient, msg.sender_id));
-                });
-        }
-
-        function addMessage(msg, author, recipient, senderId) {
-            let chatBox = document.getElementById('chat-box');
-            let messageElement = document.createElement('div');
-            // Add class based on sender_id to determine alignment
-            messageElement.className = senderId === currentUserId ? 'message sent' : 'message received';
-            messageElement.innerHTML = `
-                <span class="message-content" data-original="${msg}">${msg}</span>
-                <select class="translate-dropdown" onchange="translateMessage(this)">
-                    <option value="">Translate</option>
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="zh-cn">Chinese</option>
-                </select>
-            `;
-            chatBox.appendChild(messageElement);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function sendMessage() {
-            let recipient = document.getElementById('chat-recipient').textContent;
-            let messageInput = document.getElementById('message');
-            let message = messageInput.value;
-            socket.emit('message', {recipient: recipient, message: message});
-            messageInput.value = '';
-        }
-
-        function translateMessage(selectElement) {
-            let messageElement = selectElement.previousElementSibling;
-            let originalText = messageElement.getAttribute('data-original');
-            let dest_lang = selectElement.value;
-
-            // Extract the actual message content
-            let textToTranslate = dest_lang === 'en' ? originalText : messageElement.textContent;
-
-            fetch('/translate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({text: textToTranslate, dest_lang: dest_lang})
-            })
-            .then(response => response.json())
-            .then(data => {
-                messageElement.textContent = data.translated_text;
-            });
-        }
-
-        function searchUser() {
-            let searchInput = document.getElementById('search-user').value;
-            let chatItems = document.querySelectorAll('.chat-item');
-            chatItems.forEach(item => {
-                if (item.textContent.toLowerCase().includes(searchInput.toLowerCase())) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-    </script>
-</body>
-</html> -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -172,15 +10,21 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>Chats</h2>
+                <button onclick="logout()" class="logout-button">Logout</button>
                 <input type="text" id="search-user" placeholder="Search or start a new chat" oninput="searchUser()">
             </div>
-            <div id="chat-list" class="chat-list">
-                <!-- Chat items will be dynamically populated here -->
-            </div>
+            <div id="chat-list" class="chat-list"></div>
         </div>
         <div class="main-chat">
             <div id="chat-header" class="chat-header">
                 <h2 id="chat-recipient">Select a chat</h2>
+                <select id="chat-translate-dropdown" onchange="updateTranslationLanguage()">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh-cn">Chinese</option>
+                </select>
             </div>
             <div id="chat-box" class="chat-box"></div>
             <div class="message-input">
@@ -193,13 +37,17 @@
     <script>
         const socket = io();
         let currentRecipientId = null;
-        const currentUserId = {{ current_user.id }}; // Add current user ID
-        const currentUsername = "{{ current_user.username }}"; // Add current username
+        const currentUserId = {{ current_user.id }};
+        const currentUsername = "{{ current_user.username }}";
+        let selectedLanguage = 'en';  // Default language
 
         socket.on('message', function(data){
             if ((data.recipient === document.getElementById('chat-recipient').textContent) || 
                 (data.author === document.getElementById('chat-recipient').textContent)) {
-                addMessage(data.message, data.author, data.recipient, data.sender_id);
+                translateMessage(data.message, selectedLanguage)
+                    .then(translatedMessage => {
+                        addMessage(translatedMessage, data.author, data.recipient, data.sender_id);
+                    });
             } else if (data.recipient === currentUsername) {
                 const chatItem = document.querySelector(`.chat-item[data-username="${data.author}"]`);
                 if (chatItem) {
@@ -252,7 +100,12 @@
                     const chatBox = document.getElementById('chat-box');
                     chatBox.innerHTML = '';
                     if (messages.length > 0) {
-                        messages.forEach(msg => addMessage(msg.content, msg.author, msg.recipient, msg.sender_id));
+                        messages.forEach(msg => {
+                            translateMessage(msg.content, selectedLanguage)
+                                .then(translatedMessage => {
+                                    addMessage(translatedMessage, msg.author, msg.recipient, msg.sender_id);
+                                });
+                        });
                     }
                 });
         }
@@ -262,15 +115,7 @@
             let messageElement = document.createElement('div');
             messageElement.className = senderId === currentUserId ? 'message sent' : 'message received';
             messageElement.innerHTML = `
-                <span class="message-content" data-original="${msg}">${msg}</span>
-                <select class="translate-dropdown" onchange="translateMessage(this)">
-                    <option value="">Translate</option>
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="zh-cn">Chinese</option>
-                </select>
+                <span class="message-content">${msg}</span>
             `;
             chatBox.appendChild(messageElement);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -280,28 +125,49 @@
             let recipient = document.getElementById('chat-recipient').textContent;
             let messageInput = document.getElementById('message');
             let message = messageInput.value;
-            socket.emit('message', {recipient: recipient, message: message});
-            messageInput.value = '';
+
+            translateMessage(message, selectedLanguage)
+                .then(translatedMessage => {
+                    socket.emit('message', {
+                        recipient: recipient, 
+                        message: translatedMessage
+                    });
+                    messageInput.value = '';
+                });
         }
 
-        function translateMessage(selectElement) {
-            let messageElement = selectElement.previousElementSibling;
-            let originalText = messageElement.getAttribute('data-original');
-            let dest_lang = selectElement.value;
-
-            let textToTranslate = dest_lang === 'en' ? originalText : messageElement.textContent;
-
-            fetch('/translate', {
+        function translateMessage(text, destLang) {
+            return fetch('/translate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({text: textToTranslate, dest_lang: dest_lang})
+                body: JSON.stringify({text: text, dest_lang: destLang})
+            })
+            .then(response => response.json())
+            .then(data => data.translated_text);
+        }
+
+        function updateTranslationLanguage() {
+            selectedLanguage = document.getElementById('chat-translate-dropdown').value;
+
+            let messages = document.querySelectorAll('.message-content');
+            let originalMessages = Array.from(messages).map(message => message.textContent);
+
+            fetch('/translate_bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ texts: originalMessages, dest_lang: selectedLanguage })
             })
             .then(response => response.json())
             .then(data => {
-                messageElement.textContent = data.translated_text;
-            });
+                messages.forEach((message, index) => {
+                    message.textContent = data.translations[index];
+                });
+            })
+            .catch(error => console.error('Error:', error));
         }
 
         function searchUser() {
@@ -315,6 +181,28 @@
                 }
             });
         }
+
+        function logout() {
+            window.location.href = "{{ url_for('logout') }}";
+        }
     </script>
+    <style>
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header h2 {
+            margin: 0; /* Remove default margin */
+        }
+        .logout-button {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
 </body>
 </html>

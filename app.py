@@ -94,6 +94,17 @@ def translate_message():
     translated = translator.translate(text, dest=dest_lang)
     return jsonify({'translated_text': translated.text})
 
+@app.route('/translate_bulk', methods=['POST'])
+@login_required
+def translate_bulk():
+    data = request.get_json()
+    texts = data['texts']
+    dest_lang = data['dest_lang']
+    
+    translations = [translator.translate(text, dest=dest_lang).text for text in texts]
+    
+    return jsonify({'translations': translations})
+
 @app.route('/search_users', methods=['GET'])
 @login_required
 def search_users():
@@ -122,7 +133,6 @@ def handleMessage(data):
             # Add sender_id to determine message alignment
             'sender_id': current_user.id
         }, broadcast=True)
-        # send({'message': data['message'], 'author': current_user.username, 'recipient': recipient.username}, broadcast=True)
 
 if __name__ == '__main__':
     with app.app_context():
