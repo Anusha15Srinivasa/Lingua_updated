@@ -8,6 +8,8 @@ from datetime import datetime
 from forms import RegistrationForm, LoginForm
 from models import User, Message, db
 import eventlet
+import re
+
 eventlet.monkey_patch()
 
 app = Flask(__name__)
@@ -21,6 +23,35 @@ login_manager.login_view = 'login'
 socketio = SocketIO(app, async_mode='eventlet')
 
 translator = Translator()
+
+# dictionaries for each language
+idioms = {
+    'en': {
+        "break a leg": "Good luck",
+        "piece of cake": "Very easy",
+        "hit the sack": "Go to bed",
+    },
+    'es': {
+        "tirar la toalla": "Give up",
+        "estar en las nubes": "Daydreaming",
+        "dormir como un tronco": "Sleep like a log",
+    },
+    'fr': {
+        "poser un lapin": "Stand someone up",
+        "coûter les yeux de la tête": "Cost an arm and a leg",
+        "avoir un chat dans la gorge": "Have a frog in one's throat",
+    },
+    'de': {
+        "den Nagel auf den Kopf treffen": "Hit the nail on the head",
+        "ins Gras beißen": "Kick the bucket",
+        "die Daumen drücken": "Keep one's fingers crossed",
+    },
+    'zh-cn': {
+        "杯弓蛇影": "Overreact due to imaginary fears",
+        "画蛇添足": "To overdo it",
+        "盲人摸象": "To draw conclusions from incomplete data",
+    }
+}
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -83,6 +114,7 @@ def get_messages():
             'author': msg.author.username,
             'recipient': msg.recipient.username,
             'sender_id': msg.sender_id,
+            'idioms': find_idioms(msg.content, 'en')  # Assuming 'en' as default
         } for msg in messages])
 
 @app.route('/translate', methods=['POST'])
@@ -93,17 +125,6 @@ def translate_message():
     dest_lang = data.get('dest_lang')
     translated = translator.translate(text, dest=dest_lang)
     return jsonify({'translated_text': translated.text})
-
-@app.route('/translate_bulk', methods=['POST'])
-@login_required
-def translate_bulk():
-    data = request.get_json()
-    texts = data['texts']
-    dest_lang = data['dest_lang']
-    
-    translations = [translator.translate(text, dest=dest_lang).text for text in texts]
-    
-    return jsonify({'translations': translations})
 
 @app.route('/search_users', methods=['GET'])
 @login_required
@@ -118,6 +139,21 @@ def get_users():
     users = User.query.all()
     return jsonify([{'id': user.id, 'username': user.username} for user in users])
 
+# @socketio.on('message')
+# @login_required
+# def handleMessage(data):
+#     recipient = User.query.filter_by(username=data['recipient']).first()
+#     if recipient:
+#         message = Message(content=data['message'], author=current_user, recipient=recipient)
+#         db.session.add(message)
+#         db.session.commit()
+#         emit('message', {
+#             'message': data['message'],
+#             'author': current_user.username,
+#             'recipient': recipient.username,
+#             'sender_id': current_user.id,
+#             'idioms': find_idioms(data['message'], data.get('lang', 'en'))  # Check for idioms in the specified language
+#         }, broadcast=True)
 @socketio.on('message')
 @login_required
 def handleMessage(data):
@@ -126,13 +162,22 @@ def handleMessage(data):
         message = Message(content=data['message'], author=current_user, recipient=recipient)
         db.session.add(message)
         db.session.commit()
-        send({
+        idioms_found = find_idioms(data['message'], data.get('lang', 'en'))  # Find idioms and their meanings
+        emit('message', {
             'message': data['message'],
             'author': current_user.username,
             'recipient': recipient.username,
-            # Add sender_id to determine message alignment
-            'sender_id': current_user.id
+            'sender_id': current_user.id,
+            'idioms': idioms_found  # Send the idiom meanings
         }, broadcast=True)
+
+
+def find_idioms(text, lang):
+    found_idioms = []
+    for idiom, meaning in idioms.get(lang, {}).items():
+        if re.search(r'\b' + re.escape(idiom) + r'\b', text):
+            found_idioms.append({'meaning': meaning})
+    return found_idioms
 
 if __name__ == '__main__':
     with app.app_context():

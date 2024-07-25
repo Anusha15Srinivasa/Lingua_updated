@@ -4,13 +4,47 @@
     <meta charset="UTF-8">
     <title>Chat</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 2;
+        }
+
+        .logout-button {
+            float: right;
+            margin-left: auto;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="sidebar">
             <div class="sidebar-header">
-                <h2>Chats</h2>
                 <button onclick="logout()" class="logout-button">Logout</button>
+                <h2>Chats</h2>
                 <input type="text" id="search-user" placeholder="Search or start a new chat" oninput="searchUser()">
             </div>
             <div id="chat-list" class="chat-list"></div>
@@ -46,7 +80,7 @@
                 (data.author === document.getElementById('chat-recipient').textContent)) {
                 translateMessage(data.message, selectedLanguage)
                     .then(translatedMessage => {
-                        addMessage(translatedMessage, data.author, data.recipient, data.sender_id);
+                        addMessage(translatedMessage, data.author, data.recipient, data.sender_id, data.idioms);
                     });
             } else if (data.recipient === currentUsername) {
                 const chatItem = document.querySelector(`.chat-item[data-username="${data.author}"]`);
@@ -72,118 +106,121 @@
                     users.forEach(user => {
                         if (user.username !== currentUsername) {
                             const chatItem = document.createElement('div');
-                            chatItem.className = 'chat-item';
-                            chatItem.setAttribute('data-username', user.username);
-                            chatItem.innerHTML = `${user.username} <span class="notification"></span>`;
-                            chatItem.onclick = () => loadChat(user.id, user.username, chatItem);
+                            chatItem.classList.add('chat-item');
+                            chatItem.dataset.username = user.username;
+                            chatItem.textContent = user.username;
+                            chatItem.onclick = () => loadChat(user.id, user.username);
+                            const notification = document.createElement('span');
+                            notification.classList.add('notification');
+                            notification.textContent = '●';
+                            notification.style.display = 'none';
+                            chatItem.appendChild(notification);
                             chatList.appendChild(chatItem);
                         }
                     });
                 });
         }
 
-        function loadChat(recipientId, recipientName, chatItem) {
-            currentRecipientId = recipientId;
-            document.getElementById('chat-recipient').textContent = recipientName;
-
-            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
-            chatItem.classList.add('active');
-
-            const notification = chatItem.querySelector('.notification');
-            if (notification) {
-                notification.style.display = 'none';
-            }
-
-            fetch(`/messages?recipient_id=${recipientId}`)
+        function loadChat(userId, username) {
+            currentRecipientId = userId;
+            document.getElementById('chat-recipient').textContent = username;
+            fetch(`/messages?recipient_id=${userId}`)
                 .then(response => response.json())
                 .then(messages => {
                     const chatBox = document.getElementById('chat-box');
                     chatBox.innerHTML = '';
-                    if (messages.length > 0) {
-                        messages.forEach(msg => {
-                            translateMessage(msg.content, selectedLanguage)
-                                .then(translatedMessage => {
-                                    addMessage(translatedMessage, msg.author, msg.recipient, msg.sender_id);
-                                });
-                        });
-                    }
+                    messages.forEach(message => {
+                        translateMessage(message.content, selectedLanguage)
+                            .then(translatedMessage => {
+                                addMessage(translatedMessage, message.author, message.recipient, message.sender_id, message.idioms);
+                            });
+                    });
                 });
         }
 
-        function addMessage(msg, author, recipient, senderId) {
-            let chatBox = document.getElementById('chat-box');
-            let messageElement = document.createElement('div');
-            messageElement.className = senderId === currentUserId ? 'message sent' : 'message received';
-            messageElement.innerHTML = `
-                <span class="message-content">${msg}</span>
-            `;
+        function sendMessage() {
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value;
+            if (message && currentRecipientId) {
+                socket.emit('message', {
+                    message: message,
+                    recipient: document.getElementById('chat-recipient').textContent,
+                    lang: selectedLanguage
+                });
+                messageInput.value = '';
+            }
+        }
+
+        function addMessage(message, author, recipient, senderId, idioms) {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(senderId === currentUserId ? 'sent' : 'received');
+            let messageContent = document.createElement('span');
+            messageContent.textContent = message;
+            messageElement.appendChild(messageContent);
+
+            // Create tooltips for idioms
+            if (idioms.length > 0) {
+                idioms.forEach(meaning => {
+                    const tooltipElement = document.createElement('span');
+                    tooltipElement.classList.add('tooltip');
+                    tooltipElement.textContent = message;  // Display the idiom text
+                    const tooltipText = document.createElement('span');
+                    tooltipText.classList.add('tooltiptext');
+                    tooltipText.textContent = meaning;  // Display the idiom meaning
+                    tooltipElement.appendChild(tooltipText);
+                    messageElement.appendChild(tooltipElement);
+                });
+            }
+
             chatBox.appendChild(messageElement);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function sendMessage() {
-            let recipient = document.getElementById('chat-recipient').textContent;
-            let messageInput = document.getElementById('message');
-            let message = messageInput.value;
-
-            translateMessage(message, selectedLanguage)
-                .then(translatedMessage => {
-                    socket.emit('message', {
-                        recipient: recipient, 
-                        message: translatedMessage
-                    });
-                    messageInput.value = '';
-                });
-        }
-
-        function translateMessage(text, destLang) {
+        function translateMessage(message, destLang) {
             return fetch('/translate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({text: text, dest_lang: destLang})
+                body: JSON.stringify({ text: message, dest_lang: destLang })
             })
-            .then(response => response.json())
-            .then(data => data.translated_text);
+                .then(response => response.json())
+                .then(data => data.translated_text);
+        }
+
+        function logout() {
+            window.location.href = '/logout';
         }
 
         function updateTranslationLanguage() {
             selectedLanguage = document.getElementById('chat-translate-dropdown').value;
-
-            let messages = document.querySelectorAll('.message-content');
-            let originalMessages = Array.from(messages).map(message => message.textContent);
-
-            fetch('/translate_bulk', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ texts: originalMessages, dest_lang: selectedLanguage })
-            })
-            .then(response => response.json())
-            .then(data => {
-                messages.forEach((message, index) => {
-                    message.textContent = data.translations[index];
-                });
-            })
-            .catch(error => console.error('Error:', error));
         }
 
         function searchUser() {
-            let searchInput = document.getElementById('search-user').value;
-            let chatItems = document.querySelectorAll('.chat-item');
-            chatItems.forEach(item => {
-                if (item.textContent.toLowerCase().includes(searchInput.toLowerCase())) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-
-        function logout() {
-            window.location.href = "{{ url_for('logout') }}";
+            const query = document.getElementById('search-user').value;
+            fetch(`/search_users?query=${query}`)
+                .then(response => response.json())
+                .then(users => {
+                    const chatList = document.getElementById('chat-list');
+                    chatList.innerHTML = '';
+                    users.forEach(user => {
+                        if (user.username !== currentUsername) {
+                            const chatItem = document.createElement('div');
+                            chatItem.classList.add('chat-item');
+                            chatItem.dataset.username = user.username;
+                            chatItem.textContent = user.username;
+                            chatItem.onclick = () => loadChat(user.id, user.username);
+                            const notification = document.createElement('span');
+                            notification.classList.add('notification');
+                            notification.textContent = '●';
+                            notification.style.display = 'none';
+                            chatItem.appendChild(notification);
+                            chatList.appendChild(chatItem);
+                        }
+                    });
+                });
         }
     </script>
     <style>
@@ -202,6 +239,9 @@
             padding: 5px 10px;
             cursor: pointer;
             border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Center align text within the button */
         }
     </style>
 </body>
